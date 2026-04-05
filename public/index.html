@@ -102,6 +102,7 @@
         class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700">
         Trends
       </button>
+      <div id="viewerBadge" class="hidden ml-3 flex items-center self-center px-3 py-1 bg-slate-100 rounded-full text-xs text-slate-500 font-medium">Read-only access</div>
     </div>
   </div>
 
@@ -131,8 +132,11 @@
         </div>
       </div>
 
+      <!-- Viewer notice -->
+      <div id="viewerNotice" class="hidden bg-indigo-50 border border-indigo-200 rounded-xl p-5 flex items-start gap-3"><div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0"><svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><p class="text-sm font-semibold text-indigo-800">Viewer Access</p><p class="text-sm text-indigo-600 mt-0.5">You have read-only access to financial summary stats. Contact an admin to request elevated access.</p></div></div>
+
       <!-- Record Summary + Categories -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div id="overviewDetails" class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         <!-- Record summary -->
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
@@ -161,7 +165,7 @@
       </div>
 
       <!-- Recent Records -->
-      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+      <div id="recentRecordsSection" class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
         <h3 class="font-semibold text-slate-800 mb-4">Recent Records</h3>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
@@ -564,10 +568,32 @@ function showDashboard() {
   document.getElementById('navEmail').textContent = userEmail;
   document.getElementById('navRole').textContent = userRole;
 
+  // ── Reset all role-specific UI to defaults before applying role rules ──
+  document.getElementById('addRecordBtn').style.display = 'none';
+  document.getElementById('addTaxBtn').style.display = 'none';
+  document.getElementById('actionsHeader').classList.add('hidden');
+
+  document.getElementById('tab-records').classList.remove('hidden');
+  document.getElementById('tab-trends').classList.remove('hidden');
+  document.getElementById('viewerBadge').classList.add('hidden');
+  document.getElementById('overviewDetails').classList.remove('hidden');
+  document.getElementById('recentRecordsSection').classList.remove('hidden');
+  document.getElementById('viewerNotice').classList.add('hidden');
+
+  // ── Apply role-specific rules ──
   if (userRole === 'admin') {
     document.getElementById('addRecordBtn').style.display = 'flex';
     document.getElementById('addTaxBtn').style.display = 'flex';
     document.getElementById('actionsHeader').classList.remove('hidden');
+  }
+
+  if (userRole === 'viewer') {
+    document.getElementById('tab-records').classList.add('hidden');
+    document.getElementById('tab-trends').classList.add('hidden');
+    document.getElementById('viewerBadge').classList.remove('hidden');
+    document.getElementById('overviewDetails').classList.add('hidden');
+    document.getElementById('recentRecordsSection').classList.add('hidden');
+    document.getElementById('viewerNotice').classList.remove('hidden');
   }
 
   showTab('overview');
@@ -594,7 +620,11 @@ function showTab(tab) {
 
 // ─── Overview ──────────────────────────────────────────────────────────────
 async function loadOverview() {
-  await Promise.all([loadStats(), loadSummary(), loadCategories(), loadRecent(), loadTaxStats()]);
+  if (userRole === 'viewer') {
+    await loadStats();
+  } else {
+    await Promise.all([loadStats(), loadSummary(), loadCategories(), loadRecent(), loadTaxStats()]);
+  }
 }
 
 async function loadStats() {
