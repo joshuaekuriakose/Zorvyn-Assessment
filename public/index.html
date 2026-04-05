@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zorvyn – Records</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --accent: #6366f1; }
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .fade-in { animation: fadeIn .25s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px);} to { opacity:1; transform:none; } }
+    .spinner { border:3px solid #e5e7eb; border-top-color:#6366f1; border-radius:50%; width:22px; height:22px; animation:spin .7s linear infinite; display:inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .badge-income  { background:#d1fae5; color:#065f46; }
+    .badge-expense { background:#fee2e2; color:#991b1b; }
+    .badge-pending   { background:#fef3c7; color:#92400e; }
+    .badge-completed { background:#d1fae5; color:#065f46; }
+    .badge-tax { background:#ede9fe; color:#5b21b6; font-weight:600; }
+    .tax-row td:first-child::before { content:'🧾 '; font-size:.75rem; }
+    input:focus, select:focus { outline:2px solid #6366f1; outline-offset:1px; }
+    .toast { position:fixed; bottom:1.5rem; right:1.5rem; z-index:9999; padding:.75rem 1.25rem; border-radius:.5rem; font-size:.875rem; font-weight:500; box-shadow:0 4px 12px rgba(0,0,0,.15); transition:opacity .3s; }
+    .toast-success { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+    .toast-error   { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+<!-- ═══════════════════════════════════════════════════════════ LOGIN PAGE -->
+<div id="loginPage" class="min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 fade-in">
+    <div class="mb-8 text-center">
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-indigo-600 mb-4">
+        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-slate-900">Zorvyn</h1>
+      <p class="text-slate-500 text-sm mt-1">Sign in to your account</p>
+    </div>
+
+    <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4"></div>
+
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+        <input id="loginEmail" type="email" placeholder="admin@example.com"
+          class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm transition" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+        <input id="loginPassword" type="password" placeholder="••••••••"
+          class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm transition" />
+      </div>
+      <button id="loginBtn" onclick="login()"
+        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm transition flex items-center justify-center gap-2">
+        Sign In
+      </button>
+    </div>
+
+    <p class="text-center text-xs text-slate-400 mt-6">Records Management System</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ DASHBOARD -->
+<div id="dashboardPage" class="hidden min-h-screen flex flex-col">
+
+  <!-- Top Nav -->
+  <nav class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+      </div>
+      <span class="font-bold text-slate-900 text-lg">Zorvyn</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="text-right hidden sm:block">
+        <p class="text-sm font-medium text-slate-900" id="navEmail"></p>
+        <p class="text-xs text-slate-500 capitalize" id="navRole"></p>
+      </div>
+      <button onclick="logout()"
+        class="text-sm text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 px-3 py-1.5 rounded-lg transition font-medium">
+        Logout
+      </button>
+    </div>
+  </nav>
+
+  <!-- Tab Bar -->
+  <div class="bg-white border-b border-slate-200 px-6">
+    <div class="flex gap-1 -mb-px">
+      <button onclick="showTab('overview')" id="tab-overview"
+        class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-indigo-600 text-indigo-600">
+        Overview
+      </button>
+      <button onclick="showTab('records')" id="tab-records"
+        class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700">
+        Records
+      </button>
+      <button onclick="showTab('trends')" id="tab-trends"
+        class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700">
+        Trends
+      </button>
+    </div>
+  </div>
+
+  <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
+
+    <!-- ── OVERVIEW TAB ── -->
+    <div id="tabOverview" class="space-y-6 fade-in">
+
+      <!-- Stat cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Total Income</p>
+          <p id="statIncome" class="text-2xl font-bold text-emerald-600">—</p>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Total Expense</p>
+          <p id="statExpense" class="text-2xl font-bold text-red-500">—</p>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Net Balance</p>
+          <p id="statBalance" class="text-2xl font-bold text-indigo-600">—</p>
+        </div>
+        <div class="bg-white rounded-xl p-5 border border-violet-200 shadow-sm">
+          <p class="text-xs font-semibold text-violet-500 uppercase tracking-wide mb-2">Total Tax Paid</p>
+          <p id="statTax" class="text-2xl font-bold text-violet-600">—</p>
+          <p id="statTaxPending" class="text-xs text-slate-400 mt-1"></p>
+        </div>
+      </div>
+
+      <!-- Record Summary + Categories -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <!-- Record summary -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <h3 class="font-semibold text-slate-800 mb-4">Record Summary</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-slate-600">Total Records</span>
+              <span id="sumTotal" class="font-bold text-slate-900">—</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-slate-600">Completed</span>
+              <span id="sumCompleted" class="font-bold text-emerald-600">—</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-slate-600">Pending</span>
+              <span id="sumPending" class="font-bold text-amber-500">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category breakdown -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <h3 class="font-semibold text-slate-800 mb-4">By Category</h3>
+          <div id="categoryList" class="space-y-2 text-sm text-slate-500 italic">Loading…</div>
+        </div>
+      </div>
+
+      <!-- Recent Records -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+        <h3 class="font-semibold text-slate-800 mb-4">Recent Records</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs text-slate-500 uppercase tracking-wide border-b border-slate-100">
+                <th class="pb-2 pr-4">Category</th>
+                <th class="pb-2 pr-4">Type</th>
+                <th class="pb-2 pr-4">Amount</th>
+                <th class="pb-2 pr-4">Status</th>
+                <th class="pb-2">Date</th>
+              </tr>
+            </thead>
+            <tbody id="recentBody" class="divide-y divide-slate-50">
+              <tr><td colspan="5" class="py-4 text-center text-slate-400">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RECORDS TAB ── -->
+    <div id="tabRecords" class="hidden space-y-4 fade-in">
+
+      <!-- Toolbar -->
+      <div class="flex flex-wrap gap-3 items-end justify-between">
+        <div class="flex flex-wrap gap-2 items-end">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Status</label>
+            <select id="filterStatus" onchange="loadRecords(1)"
+              class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+              <option value="">All</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Type</label>
+            <select id="filterType" onchange="loadRecords(1)"
+              class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+              <option value="">All</option>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">From</label>
+            <input id="filterStart" type="date" onchange="loadRecords(1)"
+              class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">To</label>
+            <input id="filterEnd" type="date" onchange="loadRecords(1)"
+              class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white" />
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button id="addTaxBtn" onclick="openTaxModal()" style="display:none" class="bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition items-center gap-2">
+            <svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
+            Add Tax
+          </button>
+          <button id="addRecordBtn" onclick="openModal()" style="display:none" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition items-center gap-2">
+            <svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            Add Record
+          </button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+              <tr class="text-left text-xs text-slate-500 uppercase tracking-wide">
+                <th class="px-4 py-3">Category</th>
+                <th class="px-4 py-3">Type</th>
+                <th class="px-4 py-3">Amount</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Date</th>
+                <th class="px-4 py-3">Note</th>
+                <th id="actionsHeader" class="px-4 py-3 hidden">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="recordsBody" class="divide-y divide-slate-100">
+              <tr><td colspan="7" class="py-8 text-center text-slate-400">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Pagination -->
+        <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between text-sm text-slate-500">
+          <span id="paginationInfo">—</span>
+          <div class="flex gap-2">
+            <button id="prevBtn" onclick="loadRecords(currentPage - 1)"
+              class="px-3 py-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition" disabled>← Prev</button>
+            <button id="nextBtn" onclick="loadRecords(currentPage + 1)"
+              class="px-3 py-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition" disabled>Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ── TRENDS TAB ── -->
+    <div id="tabTrends" class="hidden space-y-6 fade-in">
+      <div class="flex items-center gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Period</label>
+          <select id="trendPeriod" onchange="loadTrends()"
+            class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+            <option value="monthly">Monthly (last 6 months)</option>
+            <option value="weekly">Weekly (last 8 weeks)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Trend table -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100">
+          <h3 class="font-semibold text-slate-800" id="trendsTitle">Monthly Trends</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+              <tr class="text-left text-xs text-slate-500 uppercase tracking-wide">
+                <th class="px-4 py-3">Period</th>
+                <th class="px-4 py-3 text-emerald-600">Income</th>
+                <th class="px-4 py-3 text-red-500">Expense</th>
+                <th class="px-4 py-3">Net</th>
+                <th class="px-4 py-3">Bar</th>
+              </tr>
+            </thead>
+            <tbody id="trendsBody" class="divide-y divide-slate-100">
+              <tr><td colspan="5" class="py-8 text-center text-slate-400">Select a period above.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Totals footer -->
+      <div id="trendsTotals" class="hidden grid grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm text-center">
+          <p class="text-xs text-slate-500 mb-1">Period Income</p>
+          <p id="trendTotalIncome" class="text-xl font-bold text-emerald-600">—</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm text-center">
+          <p class="text-xs text-slate-500 mb-1">Period Expense</p>
+          <p id="trendTotalExpense" class="text-xl font-bold text-red-500">—</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm text-center">
+          <p class="text-xs text-slate-500 mb-1">Net</p>
+          <p id="trendTotalNet" class="text-xl font-bold text-indigo-600">—</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ════════════════════════════════════ ADD / EDIT RECORD MODAL (Admin only) -->
+<div id="recordModal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md fade-in">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h2 id="modalTitle" class="font-semibold text-slate-900">Add Record</h2>
+      <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="px-6 py-5 space-y-4">
+      <div id="modalError" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3"></div>
+      <input type="hidden" id="editId" />
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Type *</label>
+          <select id="fType" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Status</label>
+          <select id="fStatus" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Amount *</label>
+        <input id="fAmount" type="number" min="0.01" step="0.01" placeholder="0.00"
+          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Category *</label>
+        <input id="fCategory" type="text" placeholder="e.g. Salary, Rent, Utilities"
+          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Date *</label>
+        <input id="fDate" type="date"
+          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Note</label>
+        <input id="fNote" type="text" placeholder="Optional note"
+          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t border-slate-100 flex gap-3 justify-end">
+      <button onclick="closeModal()"
+        class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+      <button id="saveBtn" onclick="saveRecord()"
+        class="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition flex items-center gap-2">
+        Save
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════ TAX MODAL (Admin) -->
+<div id="taxModal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md fade-in">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center text-base">🧾</span>
+        <h2 class="font-semibold text-slate-900">Add Tax Entry</h2>
+      </div>
+      <button onclick="closeTaxModal()" class="text-slate-400 hover:text-slate-600 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="px-6 py-5 space-y-4">
+      <div id="taxModalError" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3"></div>
+      <div class="bg-violet-50 border border-violet-200 rounded-lg px-4 py-3 text-xs text-violet-700">
+        Tax entries are saved as <strong>expense</strong> records. The tax amount is deducted from your balance.
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Tax Type *</label>
+          <select id="tTaxType" onchange="updateTaxCategory()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            <option value="GST">GST</option>
+            <option value="Income Tax">Income Tax</option>
+            <option value="TDS">TDS</option>
+            <option value="Professional Tax">Professional Tax</option>
+            <option value="Advance Tax">Advance Tax</option>
+            <option value="Customs Duty">Customs Duty</option>
+            <option value="Custom">Custom…</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Status</label>
+          <select id="tStatus" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+      </div>
+      <div id="tCustomTypeRow" class="hidden">
+        <label class="block text-xs font-medium text-slate-600 mb-1">Custom Tax Name *</label>
+        <input id="tCustomType" type="text" placeholder="e.g. State Tax, Cess"
+          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Base Amount (₹) *</label>
+          <input id="tBase" type="number" min="0" step="0.01" placeholder="e.g. 50000"
+            oninput="calcTax()"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Tax Rate (%)
+            <span class="text-slate-400 font-normal">– or enter amount directly</span>
+          </label>
+          <div class="flex gap-1">
+            <select id="tRatePreset" onchange="applyRatePreset()" class="border border-slate-300 rounded-lg px-2 py-2 text-sm bg-white w-24 shrink-0">
+              <option value="">—</option>
+              <option value="5">5%</option>
+              <option value="12">12%</option>
+              <option value="18">18%</option>
+              <option value="28">28%</option>
+              <option value="10">10%</option>
+              <option value="20">20%</option>
+              <option value="30">30%</option>
+            </select>
+            <input id="tRate" type="number" min="0" max="100" step="0.01" placeholder="%"
+              oninput="calcTax()"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+          </div>
+        </div>
+      </div>
+      <div class="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-500 mb-0.5">Tax Amount (Debit)</p>
+          <p id="tAmountDisplay" class="text-xl font-bold text-violet-700">₹0</p>
+        </div>
+        <div class="text-right">
+          <p class="text-xs text-slate-500 mb-0.5">Override amount</p>
+          <input id="tAmountOverride" type="number" min="0" step="0.01" placeholder="Manual"
+            oninput="onOverride()"
+            class="w-28 border border-slate-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Due / Payment Date *</label>
+          <input id="tDate" type="date" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Note</label>
+          <input id="tNote" type="text" placeholder="e.g. Q1 advance tax"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t border-slate-100 flex gap-3 justify-end">
+      <button onclick="closeTaxModal()"
+        class="px-4 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+      <button id="saveTaxBtn" onclick="saveTax()"
+        class="px-5 py-2 text-sm bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg transition flex items-center gap-2">
+        Save Tax Entry
+      </button>
+    </div>
+  </div>
+</div>
+<!-- ══════════════════════════════════════════════════ DELETE CONFIRM MODAL -->
+<div id="deleteModal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 fade-in text-center">
+    <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+      <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      </svg>
+    </div>
+    <h3 class="font-semibold text-slate-900 mb-1">Delete Record</h3>
+    <p class="text-sm text-slate-500 mb-6">This action cannot be undone.</p>
+    <div class="flex gap-3 justify-center">
+      <button onclick="closeDeleteModal()"
+        class="px-5 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+      <button id="confirmDeleteBtn"
+        class="px-5 py-2 text-sm bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:5000/api';
+let token = '';
+let userRole = '';
+let userEmail = '';
+let currentPage = 1;
+let totalRecords = 0;
+const LIMIT = 10;
+
+// ─── Auth ──────────────────────────────────────────────────────────────────
+async function login() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+
+  errEl.classList.add('hidden');
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Login failed');
+
+    token = data.token;
+    userRole = data.role;
+    userEmail = data.email;
+    showDashboard();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.innerHTML = 'Sign In';
+    btn.disabled = false;
+  }
+}
+
+function logout() {
+  token = ''; userRole = ''; userEmail = '';
+  document.getElementById('dashboardPage').classList.add('hidden');
+  document.getElementById('loginPage').classList.remove('hidden');
+  document.getElementById('loginPassword').value = '';
+}
+
+document.getElementById('loginPassword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+
+// ─── Dashboard boot ────────────────────────────────────────────────────────
+function showDashboard() {
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('dashboardPage').classList.remove('hidden');
+  document.getElementById('navEmail').textContent = userEmail;
+  document.getElementById('navRole').textContent = userRole;
+
+  if (userRole === 'admin') {
+    document.getElementById('addRecordBtn').style.display = 'flex';
+    document.getElementById('addTaxBtn').style.display = 'flex';
+    document.getElementById('actionsHeader').classList.remove('hidden');
+  }
+
+  showTab('overview');
+}
+
+// ─── Tabs ──────────────────────────────────────────────────────────────────
+function showTab(tab) {
+  ['overview','records','trends'].forEach(t => {
+    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('hidden');
+    const btn = document.getElementById('tab-' + t);
+    btn.classList.remove('border-indigo-600','text-indigo-600');
+    btn.classList.add('border-transparent','text-slate-500');
+  });
+
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('hidden');
+  const active = document.getElementById('tab-' + tab);
+  active.classList.add('border-indigo-600','text-indigo-600');
+  active.classList.remove('border-transparent','text-slate-500');
+
+  if (tab === 'overview') loadOverview();
+  if (tab === 'records')  loadRecords(1);
+  if (tab === 'trends')   loadTrends();
+}
+
+// ─── Overview ──────────────────────────────────────────────────────────────
+async function loadOverview() {
+  await Promise.all([loadStats(), loadSummary(), loadCategories(), loadRecent(), loadTaxStats()]);
+}
+
+async function loadStats() {
+  try {
+    const res = await authFetch('/dashboard/stats');
+    const d = await res.json();
+    document.getElementById('statIncome').textContent  = fmt(d.totalIncome);
+    document.getElementById('statExpense').textContent = fmt(d.totalExpense);
+    const bal = document.getElementById('statBalance');
+    bal.textContent = fmt(d.netBalance);
+    bal.className = 'text-2xl font-bold ' + (d.netBalance >= 0 ? 'text-indigo-600' : 'text-red-500');
+  } catch {}
+}
+
+async function loadSummary() {
+  try {
+    const res = await authFetch('/records/summary');
+    const d = await res.json();
+    document.getElementById('sumTotal').textContent     = d.total;
+    document.getElementById('sumCompleted').textContent = d.completed;
+    document.getElementById('sumPending').textContent   = d.pending;
+  } catch {}
+}
+
+async function loadCategories() {
+  const el = document.getElementById('categoryList');
+  try {
+    const res = await authFetch('/dashboard/categories');
+    const data = await res.json();
+    if (!data.length) { el.textContent = 'No data yet.'; return; }
+    el.innerHTML = data.map(c => `
+      <div class="flex justify-between items-center py-1">
+        <span class="text-slate-700 font-medium">${esc(c._id)}</span>
+        <span class="font-semibold text-slate-900">${fmt(c.total)}</span>
+      </div>
+    `).join('');
+  } catch { el.textContent = 'Could not load categories.'; }
+}
+
+async function loadRecent() {
+  const tbody = document.getElementById('recentBody');
+  try {
+    const res = await authFetch('/dashboard/recent');
+    const data = await res.json();
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400">No records yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(r => `
+      <tr class="hover:bg-slate-50 transition">
+        <td class="py-2 pr-4 font-medium">${esc(r.category)}</td>
+        <td class="py-2 pr-4"><span class="badge-${r.type} text-xs px-2 py-0.5 rounded-full font-medium capitalize">${r.type}</span></td>
+        <td class="py-2 pr-4 font-semibold ${r.type==='income'?'text-emerald-600':'text-red-500'}">${fmt(r.amount)}</td>
+        <td class="py-2 pr-4"><span class="badge-${r.status} text-xs px-2 py-0.5 rounded-full font-medium capitalize">${r.status}</span></td>
+        <td class="py-2 text-slate-500">${fmtDate(r.date)}</td>
+      </tr>
+    `).join('');
+  } catch { tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-red-400">Failed to load.</td></tr>'; }
+}
+
+// ─── Records Table ─────────────────────────────────────────────────────────
+async function loadRecords(page = 1) {
+  currentPage = page;
+  const tbody = document.getElementById('recordsBody');
+  tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400"><span class="spinner"></span></td></tr>';
+
+  const status = document.getElementById('filterStatus').value;
+  const type   = document.getElementById('filterType').value;
+  const start  = document.getElementById('filterStart').value;
+  const end    = document.getElementById('filterEnd').value;
+  const params = new URLSearchParams({ page, limit: LIMIT });
+  if (status) params.set('status', status);
+  if (type)   params.set('type', type);
+  if (start)  params.set('startDate', start);
+  if (end)    params.set('endDate', end);
+
+  try {
+    const res  = await authFetch(`/records?${params}`);
+    const data = await res.json();
+    totalRecords = data.total;
+
+    if (!data.data.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400">No records found.</td></tr>';
+    } else {
+      tbody.innerHTML = data.data.map(r => `
+        <tr class="${isTax(r.category) ? 'bg-violet-50 hover:bg-violet-100' : 'hover:bg-slate-50'} transition">
+          <td class="px-4 py-3 font-medium">${esc(r.category)}${isTax(r.category) ? ' <span class="badge-tax text-xs px-1.5 py-0.5 rounded-full ml-1">tax</span>' : ''}</td>
+          <td class="px-4 py-3"><span class="badge-${r.type} text-xs px-2 py-0.5 rounded-full font-medium capitalize">${r.type}</span></td>
+          <td class="px-4 py-3 font-semibold ${r.type==='income'?'text-emerald-600':'text-red-500'}">${fmt(r.amount)}</td>
+          <td class="px-4 py-3"><span class="badge-${r.status} text-xs px-2 py-0.5 rounded-full font-medium capitalize">${r.status}</span></td>
+          <td class="px-4 py-3 text-slate-500">${fmtDate(r.date)}</td>
+          <td class="px-4 py-3 text-slate-500 max-w-[140px] truncate">${esc(r.note || '—')}</td>
+          ${userRole === 'admin' ? `
+          <td class="px-4 py-3">
+            <div class="flex gap-2">
+              <button onclick='openModal(${JSON.stringify(r)})'
+                class="text-xs px-2 py-1 border border-indigo-200 text-indigo-600 rounded hover:bg-indigo-50 transition">Edit</button>
+              <button onclick="confirmDelete('${r._id}')"
+                class="text-xs px-2 py-1 border border-red-200 text-red-500 rounded hover:bg-red-50 transition">Delete</button>
+            </div>
+          </td>` : '<td class="px-4 py-3"></td>'}
+        </tr>
+      `).join('');
+    }
+
+    const start = (page - 1) * LIMIT + 1;
+    const end   = Math.min(page * LIMIT, totalRecords);
+    document.getElementById('paginationInfo').textContent =
+      totalRecords ? `Showing ${start}–${end} of ${totalRecords}` : 'No records';
+    document.getElementById('prevBtn').disabled = page <= 1;
+    document.getElementById('nextBtn').disabled = page * LIMIT >= totalRecords;
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-red-400">Failed to load records.</td></tr>`;
+  }
+}
+
+// ─── Modal ─────────────────────────────────────────────────────────────────
+function openModal(record = null) {
+  document.getElementById('modalTitle').textContent = record ? 'Edit Record' : 'Add Record';
+  document.getElementById('editId').value    = record?._id || '';
+  document.getElementById('fType').value     = record?.type || 'income';
+  document.getElementById('fStatus').value   = record?.status || 'pending';
+  document.getElementById('fAmount').value   = record?.amount || '';
+  document.getElementById('fCategory').value = record?.category || '';
+  document.getElementById('fDate').value     = record?.date ? record.date.slice(0,10) : '';
+  document.getElementById('fNote').value     = record?.note || '';
+  document.getElementById('modalError').classList.add('hidden');
+  document.getElementById('recordModal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('recordModal').classList.add('hidden');
+}
+
+async function saveRecord() {
+  const id       = document.getElementById('editId').value;
+  const errEl    = document.getElementById('modalError');
+  const saveBtn  = document.getElementById('saveBtn');
+
+  const body = {
+    type:     document.getElementById('fType').value,
+    status:   document.getElementById('fStatus').value,
+    amount:   parseFloat(document.getElementById('fAmount').value),
+    category: document.getElementById('fCategory').value.trim(),
+    date:     document.getElementById('fDate').value,
+    note:     document.getElementById('fNote').value.trim()
+  };
+
+  errEl.classList.add('hidden');
+  saveBtn.innerHTML = '<span class="spinner"></span> Saving';
+  saveBtn.disabled = true;
+
+  try {
+    const res = await authFetch(
+      id ? `/records/${id}` : '/records',
+      { method: id ? 'PUT' : 'POST', body: JSON.stringify(body) }
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = Array.isArray(data.message) ? data.message.join(' · ') : data.message;
+      errEl.classList.remove('hidden');
+      return;
+    }
+    closeModal();
+    showToast(id ? 'Record updated' : 'Record created', 'success');
+    loadRecords(currentPage);
+    loadStats();
+    loadSummary();
+  } catch (e) {
+    errEl.textContent = 'An error occurred. Please try again.';
+    errEl.classList.remove('hidden');
+  } finally {
+    saveBtn.innerHTML = 'Save';
+    saveBtn.disabled = false;
+  }
+}
+
+// ─── Delete ────────────────────────────────────────────────────────────────
+let pendingDeleteId = null;
+
+function confirmDelete(id) {
+  pendingDeleteId = id;
+  document.getElementById('deleteModal').classList.remove('hidden');
+  document.getElementById('confirmDeleteBtn').onclick = async () => {
+    try {
+      const res = await authFetch(`/records/${pendingDeleteId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      closeDeleteModal();
+      showToast('Record deleted', 'success');
+      loadRecords(currentPage);
+      loadStats();
+      loadSummary();
+    } catch { showToast('Delete failed', 'error'); }
+  };
+}
+
+function closeDeleteModal() {
+  pendingDeleteId = null;
+  document.getElementById('deleteModal').classList.add('hidden');
+}
+
+
+// ─── Trends ────────────────────────────────────────────────────────────────
+async function loadTrends() {
+  const period = document.getElementById('trendPeriod').value;
+  const tbody  = document.getElementById('trendsBody');
+  document.getElementById('trendsTitle').textContent =
+    period === 'monthly' ? 'Monthly Trends (last 6 months)' : 'Weekly Trends (last 8 weeks)';
+  tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400"><span class="spinner"></span></td></tr>';
+  document.getElementById('trendsTotals').classList.add('hidden');
+
+  try {
+    const url = period === 'monthly' ? '/dashboard/trends/monthly' : '/dashboard/trends/weekly';
+    const res  = await authFetch(url);
+    const data = await res.json();
+
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400">No data for this period.</td></tr>';
+      return;
+    }
+
+    const maxVal = Math.max(...data.map(r => Math.max(r.income, r.expense)));
+
+    tbody.innerHTML = data.map(r => {
+      const incW = maxVal ? Math.round((r.income / maxVal) * 100) : 0;
+      const expW = maxVal ? Math.round((r.expense / maxVal) * 100) : 0;
+      const netColor = r.net >= 0 ? 'text-emerald-600' : 'text-red-500';
+      return `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="px-4 py-3 font-medium text-slate-700">${esc(r.label)}</td>
+          <td class="px-4 py-3 text-emerald-600 font-semibold">${fmt(r.income)}</td>
+          <td class="px-4 py-3 text-red-500 font-semibold">${fmt(r.expense)}</td>
+          <td class="px-4 py-3 font-bold ${netColor}">${fmt(r.net)}</td>
+          <td class="px-4 py-3 w-40">
+            <div class="space-y-1">
+              <div class="flex items-center gap-1">
+                <div class="h-2 rounded bg-emerald-400" style="width:${incW}%;min-width:${r.income?'4px':'0'}"></div>
+              </div>
+              <div class="flex items-center gap-1">
+                <div class="h-2 rounded bg-red-400" style="width:${expW}%;min-width:${r.expense?'4px':'0'}"></div>
+              </div>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+
+    // Totals
+    const totInc = data.reduce((s, r) => s + r.income, 0);
+    const totExp = data.reduce((s, r) => s + r.expense, 0);
+    const totNet = totInc - totExp;
+    document.getElementById('trendTotalIncome').textContent  = fmt(totInc);
+    document.getElementById('trendTotalExpense').textContent = fmt(totExp);
+    const netEl = document.getElementById('trendTotalNet');
+    netEl.textContent = fmt(totNet);
+    netEl.className   = 'text-xl font-bold ' + (totNet >= 0 ? 'text-indigo-600' : 'text-red-500');
+    document.getElementById('trendsTotals').classList.remove('hidden');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-red-400">Failed to load trends.</td></tr>';
+  }
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+function authFetch(path, opts = {}) {
+  return fetch(API + path, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token,
+      ...(opts.headers || {})
+    }
+  });
+}
+
+function fmt(n) {
+  return new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 }).format(n);
+}
+
+function fmtDate(d) {
+  return new Date(d).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function esc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
+}
+
+
+// ─── Tax helpers ───────────────────────────────────────────────────────────
+function isTax(category) {
+  return typeof category === 'string' && category.startsWith('Tax –');
+}
+
+async function loadTaxStats() {
+  try {
+    // Pull all tax records from category summary
+    const res = await authFetch('/dashboard/categories');
+    const cats = await res.json();
+    const taxCats = cats.filter(c => isTax(c._id));
+    const totalTax = taxCats.reduce((s, c) => s + c.total, 0);
+    document.getElementById('statTax').textContent = fmt(totalTax);
+
+    // Pending tax count from records
+    const rPending = await authFetch('/records?limit=200&status=pending');
+    const pd = await rPending.json();
+    const pendingTaxCount = (pd.data || []).filter(r => isTax(r.category)).length;
+    document.getElementById('statTaxPending').textContent =
+      pendingTaxCount ? pendingTaxCount + ' pending' : 'all settled';
+  } catch {}
+}
+
+// ─── Tax Modal ─────────────────────────────────────────────────────────────
+function openTaxModal() {
+  document.getElementById('taxModalError').classList.add('hidden');
+  document.getElementById('tTaxType').value = 'GST';
+  document.getElementById('tStatus').value = 'pending';
+  document.getElementById('tBase').value = '';
+  document.getElementById('tRate').value = '';
+  document.getElementById('tRatePreset').value = '';
+  document.getElementById('tAmountOverride').value = '';
+  document.getElementById('tAmountDisplay').textContent = '₹0';
+  document.getElementById('tDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('tNote').value = '';
+  document.getElementById('tCustomTypeRow').classList.add('hidden');
+  document.getElementById('taxModal').classList.remove('hidden');
+}
+
+function closeTaxModal() {
+  document.getElementById('taxModal').classList.add('hidden');
+}
+
+function updateTaxCategory() {
+  const v = document.getElementById('tTaxType').value;
+  document.getElementById('tCustomTypeRow').classList.toggle('hidden', v !== 'Custom');
+}
+
+function applyRatePreset() {
+  const v = document.getElementById('tRatePreset').value;
+  if (v) { document.getElementById('tRate').value = v; calcTax(); }
+}
+
+let _calcedTax = 0;
+function calcTax() {
+  const base = parseFloat(document.getElementById('tBase').value) || 0;
+  const rate = parseFloat(document.getElementById('tRate').value) || 0;
+  _calcedTax = parseFloat((base * rate / 100).toFixed(2));
+  document.getElementById('tAmountDisplay').textContent = fmt(_calcedTax);
+  document.getElementById('tAmountOverride').value = '';
+}
+
+function onOverride() {
+  const v = parseFloat(document.getElementById('tAmountOverride').value);
+  if (!isNaN(v)) {
+    _calcedTax = v;
+    document.getElementById('tAmountDisplay').textContent = fmt(v);
+  }
+}
+
+async function saveTax() {
+  const errEl   = document.getElementById('taxModalError');
+  const saveBtn = document.getElementById('saveTaxBtn');
+
+  const taxTypeEl = document.getElementById('tTaxType').value;
+  const taxType   = taxTypeEl === 'Custom'
+    ? document.getElementById('tCustomType').value.trim()
+    : taxTypeEl;
+
+  const override = parseFloat(document.getElementById('tAmountOverride').value);
+  const amount   = isNaN(override) ? _calcedTax : override;
+  const base     = parseFloat(document.getElementById('tBase').value) || 0;
+  const rate     = parseFloat(document.getElementById('tRate').value);
+  const date     = document.getElementById('tDate').value;
+  const note     = document.getElementById('tNote').value.trim();
+  const status   = document.getElementById('tStatus').value;
+
+  errEl.classList.add('hidden');
+
+  if (!taxType) { errEl.textContent = 'Please enter a tax name.'; errEl.classList.remove('hidden'); return; }
+  if (!amount || amount <= 0) { errEl.textContent = 'Tax amount must be greater than 0.'; errEl.classList.remove('hidden'); return; }
+  if (!date) { errEl.textContent = 'Date is required.'; errEl.classList.remove('hidden'); return; }
+
+  // Build a descriptive auto-note
+  let autoNote = base && !isNaN(rate)
+    ? `Base ₹${base.toLocaleString('en-IN')} @ ${rate}%`
+    : `Tax amount ₹${amount.toLocaleString('en-IN')}`;
+  if (note) autoNote += ' — ' + note;
+
+  const body = {
+    type:     'expense',
+    status,
+    amount,
+    category: 'Tax – ' + taxType,
+    date,
+    note:     autoNote
+  };
+
+  saveBtn.innerHTML = '<span class="spinner"></span> Saving';
+  saveBtn.disabled = true;
+
+  try {
+    const res  = await authFetch('/records', { method: 'POST', body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = Array.isArray(data.message) ? data.message.join(' · ') : data.message;
+      errEl.classList.remove('hidden');
+      return;
+    }
+    closeTaxModal();
+    showToast('Tax entry saved', 'success');
+    loadRecords(currentPage);
+    loadStats();
+    loadSummary();
+    loadTaxStats();
+  } catch {
+    errEl.textContent = 'An error occurred. Please try again.';
+    errEl.classList.remove('hidden');
+  } finally {
+    saveBtn.innerHTML = 'Save Tax Entry';
+    saveBtn.disabled = false;
+  }
+}
+
+// Close modals on backdrop click
+document.getElementById('recordModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+document.getElementById('deleteModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeDeleteModal(); });
+document.getElementById('taxModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeTaxModal(); });
+</script>
+</body>
+</html>
